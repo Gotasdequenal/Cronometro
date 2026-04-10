@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Cronómetro con IA</h1>
+    <button type="button" onclick="init()">Iniciar Cámara</button>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+    
+    <!-- Aquí mostraremos el cronómetro -->
+    <h2 id="timer">Tiempo: 0s</h2>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/vtm3GalAc/";
+        let model, webcam, labelContainer, maxPredictions;
+        
+        // Variables para el cronómetro
+        let startTime;
+        let running = false;
+        let timerDisplay = document.getElementById("timer");
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            webcam = new tmImage.Webcam(200, 200, true);
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            // Suponiendo que mbot es la clase 0 y vacio es la clase 1
+            let mbotProb = prediction[0].probability;
+            
+            if (mbotProb > 0.90 && !running) {
+                // Iniciar cronómetro
+                running = true;
+                startTime = Date.now();
+                console.log("Detectado MBOT - Iniciando");
+            } else if (mbotProb < 0.50 && running) {
+                // Detener cronómetro
+                running = false;
+                let finalTime = (Date.now() - startTime) / 1000;
+                timerDisplay.innerHTML = "Tiempo final: " + finalTime.toFixed(2) + "s";
+                console.log("MBOT fuera - Detenido");
+            }
+
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.childNodes[i].innerHTML = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+            }
+        }
+    </script>
+</body>
+</html>
