@@ -1,12 +1,30 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <style>
+        /* Estilo para la etiqueta de versión */
+        .version-tag {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #eee;
+            padding: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
 <body>
+    <!-- Etiqueta de versión para saber si GitHub actualizó -->
+    <div class="version-tag">v1.0.2</div>
+
     <h1>Control de Tiempo mBot</h1>
     <button type="button" onclick="init()">Iniciar Cámara</button>
+    <button type="button" onclick="resetTimer()">Resetear Cronómetro</button>
+    
     <div id="webcam-container"></div>
     <div id="label-container"></div>
     
-    <!-- Aquí mostraremos el tiempo corriendo -->
     <h2 id="timer">Tiempo: 0.00s</h2>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -18,7 +36,7 @@
         
         let startTime = 0;
         let isRunning = false;
-        let canDetect = true; // Variable para el bloqueo de 5 segundos
+        let canDetect = true; 
         let timerInterval;
 
         async function init() {
@@ -47,29 +65,25 @@
 
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
-            // Asumimos que la clase "mbot" es la primera (índice 0)
-            let mbotProb = prediction[0].probability;
+            let mbotProb = prediction[0].probability; // Clase mbot
 
             if (mbotProb > 0.90 && canDetect) {
                 if (!isRunning) {
-                    // INICIAR CRONÓMETRO
+                    // INICIAR
                     isRunning = true;
                     startTime = Date.now();
                     timerInterval = setInterval(updateDisplay, 100);
-                    
-                    // Activar bloqueo de 5 segundos
                     canDetect = false;
                     setTimeout(() => { canDetect = true; }, 5000);
                 } else {
-                    // DETENER CRONÓMETRO (segunda detección)
+                    // DETENER
                     isRunning = false;
                     clearInterval(timerInterval);
-                    canDetect = false; // Bloquear para no reiniciar inmediatamente
+                    canDetect = false;
                     setTimeout(() => { canDetect = true; }, 5000);
                 }
             }
 
-            // Mostrar probabilidades en pantalla
             for (let i = 0; i < maxPredictions; i++) {
                 labelContainer.childNodes[i].innerHTML = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
             }
@@ -78,6 +92,13 @@
         function updateDisplay() {
             let elapsed = (Date.now() - startTime) / 1000;
             document.getElementById("timer").innerHTML = "Tiempo: " + elapsed.toFixed(1) + "s";
+        }
+
+        function resetTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById("timer").innerHTML = "Tiempo: 0.00s";
+            canDetect = true;
         }
     </script>
 </body>
